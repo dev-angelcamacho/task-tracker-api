@@ -9,12 +9,11 @@ class PersonaCreate(BaseModel):
     phone: int
     is_actived: bool = False
 
+# Hacemos que herede de PersonaCreate
 class PersonaResponse(PersonaCreate):
     id: int
     model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -22,14 +21,12 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    email: str
+    email: EmailStr
     is_active: bool
     model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
 
-# --- Esquema para token de respuesta
+# --- Esquema para token de respuesta ---
 class Token(BaseModel):
     access_token: str
-    token_type: str    
+    token_type: str

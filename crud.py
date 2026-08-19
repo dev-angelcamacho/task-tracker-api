@@ -8,6 +8,9 @@ import security
 def get_personas(db: Session):
     return db.query(models.PersonaModel).all()
 
+def get_persona(db: Session, persona_id: int):
+    return db.query(models.PersonaModel).filter(models.PersonaModel.id == persona_id).first()
+
 # Obtener por ID
 def get_persona_by_id(db: Session, persona_id: int):
     return db.query(models.PersonaModel).filter(models.PersonaModel.id == persona_id).first()
