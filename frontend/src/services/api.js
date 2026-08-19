@@ -1,4 +1,4 @@
-const API_URL = 'http://127.0.0.1:8090/api';
+const API_URL = 'http://localhost:8080/api';
 
 // Función centralizada para peticiones autenticadas
 export async function apiFetch(endpoint, options = {}) {
@@ -58,13 +58,12 @@ export async function login(email, password) {
     body: formData,
   });
 
-  const data = await response.json();
-
   if (!response.ok) {
-    throw new Error(data.detail || 'Error al iniciar sesión');
+    const errorData = await response.json();
+    throw new Error(errorData.detail || 'Error al iniciar sesión');
   }
 
-  return data; // Retorna { access_token, token_type }
+  return await response.json();
 }
 
 export async function register(email, password) {
