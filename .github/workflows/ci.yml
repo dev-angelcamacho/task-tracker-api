@@ -45,17 +45,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Ejecutar pruebas con Pytest
-        run: |
-          pytest -v
-      - name: Run database migrations
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/task_tracker_db
+      - name: Ejecutar migraciones de base de datos
         run: |
           alembic upgrade head
 
-      - name: Run tests
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/task_tracker_db
+      - name: Ejecutar pruebas con Pytest
         run: |
           pytest -v
