@@ -1,0 +1,5 @@
+$kind: http-request
+name: Borrar Tarea
+url: "{{URL}}api/v1/tasks/1"
+method: DELETE
+order: 4500438428184633

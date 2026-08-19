@@ -1,0 +1,8 @@
+$kind: http-request
+name: Inicio
+url: "{{URL}}"
+method: GET
+body:
+  type: json
+  content: ""
+order: 1787098454184

@@ -1,0 +1,8 @@
+$kind: http-request
+name: Obtener Tarea por ID
+url: "{{URL}}api/v1/tasks/2"
+method: GET
+body:
+  type: json
+  content: ""
+order: 4294738083176385

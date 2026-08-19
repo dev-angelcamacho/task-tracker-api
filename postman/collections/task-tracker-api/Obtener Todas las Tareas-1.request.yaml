@@ -1,0 +1,8 @@
+$kind: http-request
+name: Obtener Todas las Tareas
+url: "{{URL}}api/v1/tasks"
+method: GET
+body:
+  type: json
+  content: ""
+order: 4424316401550328

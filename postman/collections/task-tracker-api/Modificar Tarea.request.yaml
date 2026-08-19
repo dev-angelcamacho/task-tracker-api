@@ -1,0 +1,18 @@
+$kind: http-request
+name: Modificar Tarea
+url: "{{URL}}api/v1/tasks/"
+method: PUT
+body:
+  type: json
+  content: "{\r
+
+    \  \"id\": 22,\r
+
+    \  \"title\": \"Prueba 22\",\r
+
+    \  \"description\": \"Prueba tarea 22\",\r
+
+    \  \"is_completed\": false\r
+
+    }"
+order: 4500416794334139

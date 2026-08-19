@@ -1,0 +1,9 @@
+# Archivos específicos que no deseas subir
+database.py
+models.py
+
+# Entorno virtual y caché de Python (muy importante)
+venv/
+__pycache__/
+pyvenv.cfg
+.postman/
