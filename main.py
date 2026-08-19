@@ -1,6 +1,6 @@
 import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -31,11 +31,10 @@ def wait_for_db():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Evento de inicio: Esperar a la DB y crear tablas de modelos
+    # Evento de inicio: Esperar a la DB
     wait_for_db()
-    models.Base.metadata.create_all(bind=engine)
+    # models.Base.metadata.create_all(bind=engine)  # Controlado por Alembic
     yield
-    # Evento de apagado (si se requiere cleanup futuro)
 
 
 app = FastAPI(
@@ -109,14 +108,16 @@ def read_users_me(current_user: models.UserModel = Depends(get_current_user)):
     return current_user
 
 
-# --- ENDPOINTS PROTEGIDOS DE PERSONAS ---
+# --- ENDPOINTS PROTEGIDOS DE PERSONAS (CON PAGINACIÓN) ---
 
 @app.get("/api/personas", response_model=list[schemas.PersonaResponse])
 def get_all_personas(
+    skip: int = Query(0, ge=0, description="Número de registros a omitir (offset)"),
+    limit: int = Query(10, ge=1, le=100, description="Número de registros por página"),
     db: Session = Depends(get_db), 
     current_user: models.UserModel = Depends(get_current_user)
 ):
-    return crud.get_personas(db)
+    return crud.get_personas(db, skip=skip, limit=limit)
 
 @app.post("/api/personas", response_model=schemas.PersonaResponse, status_code=status.HTTP_201_CREATED)
 def create_persona(
