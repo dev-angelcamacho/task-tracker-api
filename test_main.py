@@ -1,8 +1,13 @@
 import pytest
 from fastapi.testclient import TestClient
 from main import app
+from database import Base, engine
+import models
 
 client = TestClient(app)
+
+# Crear todas las tablas en la base de datos antes de que se ejecuten los tests
+Base.metadata.create_all(bind=engine)
 
 def test_read_main():
     response = client.get("/docs")
