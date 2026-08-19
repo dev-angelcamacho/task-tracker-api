@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 # 1. Archivo donde se guardarán los datos
-SQLALCHEMY_DATABASE_URL = "sqlite:///./personas.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./personas_v2.db"
 
 # 2. Crear motor de base de datos
 engine = create_engine(
