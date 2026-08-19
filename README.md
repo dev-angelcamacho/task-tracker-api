@@ -21,7 +21,7 @@ Un sistema full-stack desacoplado para la gestión y seguimiento de tareas diari
 * **Axios / Fetch** - Cliente HTTP para el consumo de endpoints de la API REST.
 
 ---
-## 🚀 Instalación y Configuración Local
+# 🚀 Instalación y Configuración Local
 
 ### Prerrequisitos
 * Python 3.10+
@@ -30,60 +30,58 @@ Un sistema full-stack desacoplado para la gestión y seguimiento de tareas diari
 
 ---
 
-### 1. Configuración del Backend
+## 1. Configuración del Backend
 
-1. Navega a la carpeta del backend:
-   ```bash
-   cd backend
-2. Crea y activa un entorno virtual:
-   # Linux / macOS
+### 1.1 Navega a la carpeta del backend:
+      cd backend
+
+### 1.2 Crea y activa un entorno virtual:
+   #### Linux / macOS
        python3 -m venv venv
        source venv/bin/activate
-   # Windows
+   #### Windows
        python -m venv venv
        .\venv\Scripts\activate
-3. Instala las dependencias:
-   #
-          pip install -r requirements.txt
+### 1.3 Instala las dependencias:
+      pip install -r requirements.txt
    
-4. Ejecuta el servidor de desarrollo: 
-   #
-          uvicorn app.main:app --reload
+### 1.4 Ejecuta el servidor de desarrollo:
+      uvicorn app.main:app --reload
 
-5. Accede a la documentación interactiva de la API:
-   #
+### 1.5 Accede a la documentación interactiva de la API:   
           Swagger UI: http://127.0.0.1:8000/docs
           ReDoc: http://127.0.0.1:8000/redoc
 
+---
+## 2. Configuración del Frontend
 
-### 2. Configuración del Frontend
+### 2.1 En una nueva terminal, navega a la carpeta del frontend:
 
-1. En una nueva terminal, navega a la carpeta del frontend:
-# 
       cd frontend
       
-# Instala las dependencias del proyecto:
+### 2.2 Instala las dependencias del proyecto:
       npm install
       
-# Inicia el servidor de desarrollo:
+### 2.3 Inicia el servidor de desarrollo:
       npm run dev
 
-# Abre tu navegador e ingresa a: 
+### 2.4 Abre tu navegador e ingresa a: 
       http://localhost:5173 (o la URL indicada en la consola).
 
-### 3. 🧪 Pruebas Automatizadas
-Para ejecutar las pruebas del backend, asegúrate de tener el entorno virtual activo y ejecuta:
-#
+---
+# 🧪 Pruebas Automatizadas
+### Para ejecutar las pruebas del backend, asegúrate de tener el entorno virtual activo y ejecuta:
       cd backend
       pytest
-
-### 4. ✒️ Autor
+---
+# ✒️ Autor
 Desarrollador Junior / Analista de Soportes Digitales / 
 
 GitHub: @dev-angelcamacho
 
+
 ---
-## 📐 Arquitectura del Sistema
+# 📐 Arquitectura del Sistema
 
 El proyecto sigue un patrón de **Arquitectura Desacoplada (Decoupled Architecture)** con separación clara de responsabilidades:
 
