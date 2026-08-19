@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional
 
 
@@ -11,6 +11,7 @@ class PersonaCreate(BaseModel):
 
 class PersonaResponse(PersonaCreate):
     id: int
+    model_config = ConfigDict(from_attributes=True)
 
     class Config:
         from_attributes = True
@@ -21,8 +22,9 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    email: EmailStr
+    email: str
     is_active: bool
+    model_config = ConfigDict(from_attributes=True)
 
     class Config:
         from_attributes = True

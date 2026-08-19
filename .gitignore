@@ -7,3 +7,5 @@ pyvenv.cfg
 # Archivos de base de datos SQLite (para no subir la data local)
 *.db
 *.sqlite3
+
+.pytest_cache
