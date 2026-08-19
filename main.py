@@ -1,104 +1,77 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Depends
+from sqlalchemy.orm import Session
 from typing import Optional
+from pydantic import BaseModel
+
+# Importamos nuestra BD y modelos
+import models
+from database import engine, get_db
+
+# Crea las tablas en el archivo tasks.db si no existen
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-
-# --- 1. MODELO DE DATOS (Pydantic) ---
-class Task(BaseModel):
-    id: int
+# --- ESQUEMAS PYDANTIC (Validación de entrada/salida HTTP) ---
+class PersonaCreate(BaseModel):
     title: str
     description: Optional[str] = None
     is_completed: bool = False
 
-# --- 2. BASE DE DATOS EN MEMORIA ---
-db: list[Task] = []
+class PersonaResponse(PersonaCreate):
+    id: int
 
-# --- 3. ENDPOINTS ---
+    class Config:
+        from_attributes = True
 
-# GET: Obtener todas las tareas
-@app.get("/")
-def Inicio():
-    return {"message": "Hola, bienvenido a la API de tareas. Usa /api/tasks para interactuar con las tareas."}
+# --- ENDPOINTS CON BASE DE DATOS ---
 
+@app.get("/api/Personas", response_model=list[PersonaResponse])
+def get_all_personas(db: Session = Depends(get_db)):
+    # Consulta SQL equivalente a: SELECT * FROM personas;
+    return db.query(models.PersonaModel).all()
 
-@app.get("/api/v1/tasks")
-def get_all_tasks():
-    print("Se ha recibido una solicitud GET para obtener todas las tareas")
-    return db
+@app.post("/api/Personas", response_model=PersonaResponse, status_code=201)
+def create_persona(persona: PersonaCreate, db: Session = Depends(get_db)):
+    # Crear instancia del modelo SQLAlchemy
+    new_persona = models.PersonaModel(
+        title=persona.title,
+        description=persona.description,
+        is_completed=persona.is_completed
+    )
+    db.add(new_persona)      # Agregar a la transacción
+    db.commit()          # Guardar cambios en el archivo personas.db
+    db.refresh(new_persona)   # Obtener el ID autogenerado
+    return new_persona
 
-
-# POST: Crear una nueva tarea
-@app.post("/api/v1/tasks", status_code=201)
-def create_task(task: Task):
-    print("Se ha recibido una solicitud POST para crear una nueva tarea:", task)
-
-    if any(existing_task.id == task.id for existing_task in db):
-        raise HTTPException(status_code=400, detail="La tarea con este ID ya existe")
-    else:
-        db.append(task)
-    return task
-
-
-# GET: Obtener una tarea por ID
-@app.get("/api/v1/tasks/{task_id}")
-def get_task(task_id: int):
-    print("Se ha recibido una solicitud GET para obtener la tarea con ID:", task_id)
-    for task in db:
-        if task.id == task_id:
-            return task
-    raise HTTPException(status_code=404, detail="Tarea no encontrada")
-
-
-# PUT: Actualizar una tarea por ID
-@app.put("/api/v1/tasks/{task_id}")
-def update_task(task_id: int, updated_task: Task):
-    print("Se ha recibido una solicitud PUT para actualizar la tarea con ID:", task_id)
-    for i, task in enumerate(db):
-        if task.id == task_id:
-            db[i] = updated_task
-            return updated_task
-    raise HTTPException(status_code=404, detail="Tarea no encontrada")
-
-
-# DELETE: Eliminar una tarea por ID
-@app.delete("/api/v1/tasks/{task_id}", status_code=204)
-def delete_task(task_id: int):
-    print("Se ha recibido una solicitud DELETE para eliminar la tarea con ID:", task_id)
-    for i, task in enumerate(db):
-        if task.id == task_id:
-            del db[i]
-            return
-    raise HTTPException(status_code=404, detail="Tarea no encontrada")
-
-
-# GET
-@app.get("/api/v2/personas")
-def get_personas():    
-    return {"message": "Aquí se devolverían todas las personas."}
-
-# POST
-@app.post("/api/v2/personas", status_code=201)
-def create_persona(persona: dict):
+@app.get("/api/Personas/{persona_id}", response_model=PersonaResponse)
+def get_persona(persona_id: int, db: Session = Depends(get_db)):
+    persona = db.query(models.PersonaModel).filter(models.PersonaModel.id == persona_id).first()
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona no encontrada")
     return persona
 
-# PUT
-@app.put("/api/v2/personas/{persona_id}")
-def update_persona(persona_id: int, updated_persona: dict):
-    return {"message": f"Persona con ID {persona_id} actualizada."}
+@app.put("/api/Personas/{persona_id}", response_model=PersonaResponse)
+def update_persona(persona_id: int, updated_persona: PersonaCreate, db: Session = Depends(get_db)):
+    persona = db.query(models.PersonaModel).filter(models.PersonaModel.id == persona_id).first()
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona no encontrada")
+    
+    # Actualizar campos
+    persona.title = updated_persona.title
+    persona.description = updated_persona.description
+    persona.is_completed = updated_persona.is_completed
+    
+    db.commit()  # Guardar cambios
+    db.refresh(persona)  # Refrescar instancia
+    return persona
 
-# DELETE
-@app.delete("/api/v2/personas/{persona_id}", status_code=204)
-def delete_persona(persona_id: int):
-    return {"message": f"Persona con ID {persona_id} eliminada."}
-
-
-
-
-# ===============================================================================
-# ===============================================================================
-# ===============================================================================
-# ===============================================================================
-# ===============================================================================
-# ===============================================================================
+@app.delete("/api/Personas/{persona_id}", status_code=204)
+def delete_persona(persona_id: int, db: Session = Depends(get_db)):
+    persona = db.query(models.PersonaModel).filter(models.PersonaModel.id == persona_id).first()
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona no encontrada")
+    
+    db.delete(persona)  # Eliminar de la transacción
+    db.commit()         # Guardar cambios
+    return None  # Retorna 204 No Content

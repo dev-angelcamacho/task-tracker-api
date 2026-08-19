@@ -1,9 +1,9 @@
-# Archivos específicos que no deseas subir
-database.py
-models.py
-
-# Entorno virtual y caché de Python (muy importante)
+# Entorno virtual y caché de Python
 venv/
 __pycache__/
 pyvenv.cfg
 .postman/
+
+# Archivos de base de datos SQLite (para no subir la data local)
+*.db
+*.sqlite3
