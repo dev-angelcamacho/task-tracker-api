@@ -48,3 +48,14 @@ jobs:
       - name: Ejecutar pruebas con Pytest
         run: |
           pytest -v
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/task_tracker_db
+        run: |
+          alembic upgrade head
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/task_tracker_db
+        run: |
+          pytest -v
