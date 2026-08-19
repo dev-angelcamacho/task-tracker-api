@@ -1,104 +1,163 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Optional
+import time
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Depends, status, Query
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import OperationalError
+from jose import JWTError, jwt
 
-app = FastAPI()
-
-
-# --- 1. MODELO DE DATOS (Pydantic) ---
-class Task(BaseModel):
-    id: int
-    title: str
-    description: Optional[str] = None
-    is_completed: bool = False
-
-# --- 2. BASE DE DATOS EN MEMORIA ---
-db: list[Task] = []
-
-# --- 3. ENDPOINTS ---
-
-# GET: Obtener todas las tareas
-@app.get("/")
-def Inicio():
-    return {"message": "Hola, bienvenido a la API de tareas. Usa /api/tasks para interactuar con las tareas."}
+import models
+import schemas
+import crud
+import security
+from database import engine, get_db
 
 
-@app.get("/api/v1/tasks")
-def get_all_tasks():
-    print("Se ha recibido una solicitud GET para obtener todas las tareas")
-    return db
+def wait_for_db():
+    """Valida la disponibilidad del engine importado antes de crear tablas."""
+    retries = 10
+    while retries > 0:
+        try:
+            with engine.connect() as conn:
+                print("¡Conexión exitosa a la base de datos!")
+                return
+        except OperationalError:
+            retries -= 1
+            print(f"Base de datos no disponible aún, reintentando en 3 segundos... ({retries} intentos restantes)")
+            time.sleep(3)
+    raise Exception("No se pudo conectar a la base de datos.")
 
 
-# POST: Crear una nueva tarea
-@app.post("/api/v1/tasks", status_code=201)
-def create_task(task: Task):
-    print("Se ha recibido una solicitud POST para crear una nueva tarea:", task)
-
-    if any(existing_task.id == task.id for existing_task in db):
-        raise HTTPException(status_code=400, detail="La tarea con este ID ya existe")
-    else:
-        db.append(task)
-    return task
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Evento de inicio: Esperar a la DB
+    wait_for_db()
+    # models.Base.metadata.create_all(bind=engine)  # Controlado por Alembic
+    yield
 
 
-# GET: Obtener una tarea por ID
-@app.get("/api/v1/tasks/{task_id}")
-def get_task(task_id: int):
-    print("Se ha recibido una solicitud GET para obtener la tarea con ID:", task_id)
-    for task in db:
-        if task.id == task_id:
-            return task
-    raise HTTPException(status_code=404, detail="Tarea no encontrada")
+app = FastAPI(
+    title="API de Gestión de Personas", 
+    description="Sistema de registro y administración de personas con autenticación JWT", 
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Configurar el Middleware de CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Integración con el sistema de Swagger Docs para el botón "Authorize"
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
-# PUT: Actualizar una tarea por ID
-@app.put("/api/v1/tasks/{task_id}")
-def update_task(task_id: int, updated_task: Task):
-    print("Se ha recibido una solicitud PUT para actualizar la tarea con ID:", task_id)
-    for i, task in enumerate(db):
-        if task.id == task_id:
-            db[i] = updated_task
-            return updated_task
-    raise HTTPException(status_code=404, detail="Tarea no encontrada")
+# --- DEPENDENCIA DE PROTECCIÓN DE RUTAS ---
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No se pudo validar el token de acceso",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, security.SECRET_KEY, algorithms=[security.ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+        
+    user = crud.get_user_by_email(db, email=email)
+    if user is None:
+        raise credentials_exception
+    return user
 
 
-# DELETE: Eliminar una tarea por ID
-@app.delete("/api/v1/tasks/{task_id}", status_code=204)
-def delete_task(task_id: int):
-    print("Se ha recibido una solicitud DELETE para eliminar la tarea con ID:", task_id)
-    for i, task in enumerate(db):
-        if task.id == task_id:
-            del db[i]
-            return
-    raise HTTPException(status_code=404, detail="Tarea no encontrada")
+# --- RUTAS DE AUTENTICACIÓN (USUARIOS) ---
+
+@app.post("/api/auth/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
+def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = crud.get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="El correo electrónico ya está registrado"
+        )
+    return crud.create_user(db=db, user=user)
+
+@app.post("/api/auth/login", response_model=schemas.Token)
+def login_user(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = crud.get_user_by_email(db, email=form_data.username)
+    if not user or not security.verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Correo electrónico o contraseña incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = security.create_access_token(data={"sub": user.email})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/api/users/me", response_model=schemas.UserResponse)
+def read_users_me(current_user: models.UserModel = Depends(get_current_user)):
+    return current_user
 
 
-# GET
-@app.get("/api/v2/personas")
-def get_personas():    
-    return {"message": "Aquí se devolverían todas las personas."}
+# --- ENDPOINTS PROTEGIDOS DE PERSONAS (CON PAGINACIÓN) ---
 
-# POST
-@app.post("/api/v2/personas", status_code=201)
-def create_persona(persona: dict):
+@app.get("/api/personas", response_model=list[schemas.PersonaResponse])
+def get_all_personas(
+    skip: int = Query(0, ge=0, description="Número de registros a omitir (offset)"),
+    limit: int = Query(10, ge=1, le=100, description="Número de registros por página"),
+    db: Session = Depends(get_db), 
+    current_user: models.UserModel = Depends(get_current_user)
+):
+    return crud.get_personas(db, skip=skip, limit=limit)
+
+@app.post("/api/personas", response_model=schemas.PersonaResponse, status_code=status.HTTP_201_CREATED)
+def create_persona(
+    persona: schemas.PersonaCreate, 
+    db: Session = Depends(get_db), 
+    current_user: models.UserModel = Depends(get_current_user)
+):
+    return crud.create_persona(db, persona)
+
+@app.get("/api/personas/{persona_id}", response_model=schemas.PersonaResponse)
+def get_persona_by_id(
+    persona_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: models.UserModel = Depends(get_current_user)
+):
+    persona = crud.get_persona_by_id(db, persona_id)
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona no encontrada")
     return persona
 
-# PUT
-@app.put("/api/v2/personas/{persona_id}")
-def update_persona(persona_id: int, updated_persona: dict):
-    return {"message": f"Persona con ID {persona_id} actualizada."}
+@app.put("/api/personas/{persona_id}", response_model=schemas.PersonaResponse)
+def update_persona(
+    persona_id: int, 
+    persona: schemas.PersonaCreate, 
+    db: Session = Depends(get_db), 
+    current_user: models.UserModel = Depends(get_current_user)
+):
+    db_persona = crud.get_persona_by_id(db, persona_id)
+    if not db_persona:
+        raise HTTPException(status_code=404, detail="Persona no encontrada")
+    return crud.update_persona(db, db_persona, persona)
 
-# DELETE
-@app.delete("/api/v2/personas/{persona_id}", status_code=204)
-def delete_persona(persona_id: int):
-    return {"message": f"Persona con ID {persona_id} eliminada."}
-
-
-
-
-# ===============================================================================
-# ===============================================================================
-# ===============================================================================
-# ===============================================================================
-# ===============================================================================
-# ===============================================================================
+@app.delete("/api/personas/{persona_id}")
+def delete_persona(
+    persona_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: models.UserModel = Depends(get_current_user)
+):
+    db_persona = crud.get_persona_by_id(db, persona_id)
+    if not db_persona:
+        raise HTTPException(status_code=404, detail="Persona no encontrada")
+    crud.delete_persona(db, db_persona)
+    return {"message": "Persona eliminada correctamente"}

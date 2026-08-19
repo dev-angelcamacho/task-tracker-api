@@ -1,9 +1,17 @@
-# Archivos específicos que no deseas subir
-database.py
-models.py
-
-# Entorno virtual y caché de Python (muy importante)
+# Entorno virtual y Python
 venv/
+.venv/
 __pycache__/
-pyvenv.cfg
-.postman/
+*.pyc
+
+# Archivos de entorno y credenciales
+.env
+
+# Configuración del editor
+.vscode/
+.idea/
+
+# Datos o volúmenes locales
+*.db
+*.sqlite3
+postgres_data/
