@@ -1,11 +1,51 @@
 const API_URL = 'http://127.0.0.1:8090/api';
 
+// Función centralizada para peticiones autenticadas
+export async function apiFetch(endpoint, options = {}) {
+  const token = localStorage.getItem('token');
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+    ...options.headers,
+  };
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  // Intercepción central de token expirado o inválido
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    
+    // Evita bucles infinitos si el 401 viene del mismo endpoint de login
+    if (!endpoint.includes('/auth/login')) {
+      window.location.href = '/login'; 
+      throw new Error('Tu sesión ha expirado. Redirigiendo...');
+    }
+  }
+
+  // Manejo de respuestas sin cuerpo (ej: 204 No Content en DELETE)
+  if (response.status === 204) {
+    return { success: true };
+  }
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.detail || 'Ocurrió un error en la petición');
+  }
+
+  return data;
+}
+
+
+
+
 // --- AUTENTICACIÓN ---
 
-
-// 1. CONSUMO A LA API BackEnd FastAPI con JWT
 export async function login(email, password) {
-  // OAuth2PasswordRequestForm requiere x-www-form-urlencoded
   const formData = new URLSearchParams();
   formData.append('username', email);
   formData.append('password', password);
@@ -18,16 +58,15 @@ export async function login(email, password) {
     body: formData,
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Error al iniciar sesión');
+    throw new Error(data.detail || 'Error al iniciar sesión');
   }
 
-  return await response.json(); // Retorna { access_token, token_type }
+  return data; // Retorna { access_token, token_type }
 }
 
-
-// 2.  Consumo a la API BackEnd FastAPI con JWT para registrar un nuevo usuario
 export async function register(email, password) {
   const response = await fetch(`${API_URL}/auth/register`, {
     method: 'POST',
@@ -37,18 +76,16 @@ export async function register(email, password) {
     body: JSON.stringify({ email, password }),
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.detail || 'Error al registrar usuario');
+    throw new Error(data.detail || 'Error al registrar usuario');
   }
 
-  return await response.json();
+  return data;
 }
 
-
-
-
-// --- GESTIÓN DE PERSONAS LOGICA DE NEGOCIO DE LA API BACKEND ---
+// --- GESTIÓN DE PERSONAS ---
 
 export async function getPersonas(token) {
   const response = await fetch(`${API_URL}/personas`, {
@@ -59,11 +96,14 @@ export async function getPersonas(token) {
     },
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    throw new Error('Error al obtener la lista de personas');
+    // Si la respuesta no es OK, muestra la razón exacta dada por FastAPI (ej. "Not authenticated")
+    throw new Error(data.detail || 'Error al obtener la lista de personas');
   }
 
-  return await response.json();
+  return data;
 }
 
 export async function createPersona(personaData, token) {
@@ -76,13 +116,14 @@ export async function createPersona(personaData, token) {
     body: JSON.stringify(personaData),
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    throw new Error('Error al crear la persona');
+    throw new Error(data.detail || 'Error al crear la persona');
   }
 
-  return await response.json();
+  return data;
 }
-
 
 export async function updatePersona(id, personaData, token) {
   const response = await fetch(`${API_URL}/personas/${id}`, {
@@ -94,13 +135,14 @@ export async function updatePersona(id, personaData, token) {
     body: JSON.stringify(personaData),
   });
 
+  const data = await response.json();
+
   if (!response.ok) {
-    throw new Error('Error al actualizar la persona');
+    throw new Error(data.detail || 'Error al actualizar la persona');
   }
 
-  return await response.json();
+  return data;
 }
-
 
 export async function deletePersona(id, token) {
   const response = await fetch(`${API_URL}/personas/${id}`, {
@@ -111,7 +153,13 @@ export async function deletePersona(id, token) {
   });
 
   if (!response.ok) {
-    throw new Error('Error al eliminar la persona');
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Error al eliminar la persona');
+  }
+
+  // Si el backend responde con 204 (sin cuerpo), evita el error de parseo JSON
+  if (response.status === 204) {
+    return { success: true };
   }
 
   return await response.json();

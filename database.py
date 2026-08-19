@@ -1,13 +1,19 @@
+import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
 
-# 1. Archivo donde se guardarán los datos
-SQLALCHEMY_DATABASE_URL = "sqlite:///./personas_v2.db"
+load_dotenv()
 
-# 2. Crear motor de base de datos
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+# Si existe DATABASE_URL (ej. en Docker o Render) usa PostgreSQL, de lo contrario cae en SQLite local
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sql_app.db")
+
+# SQLite requiere un argumento extra que PostgreSQL no necesita
+if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 # 3. Crear fábrica de sesiones
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

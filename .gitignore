@@ -1,11 +1,17 @@
-# Entorno virtual y caché de Python
+# Entorno virtual y Python
 venv/
+.venv/
 __pycache__/
-pyvenv.cfg
-.postman/
+*.pyc
 
-# Archivos de base de datos SQLite (para no subir la data local)
+# Archivos de entorno y credenciales
+.env
+
+# Configuración del editor
+.vscode/
+.idea/
+
+# Datos o volúmenes locales
 *.db
 *.sqlite3
-
-.pytest_cache
+postgres_data/
