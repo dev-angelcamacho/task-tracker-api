@@ -59,29 +59,28 @@ Un sistema full-stack desacoplado para la gestión y seguimiento de tareas diari
 ### 2. Configuración del Frontend
 
 1. En una nueva terminal, navega a la carpeta del frontend:
+# 
+      cd frontend
+      
+# Instala las dependencias del proyecto:
+      npm install
+      
+# Inicia el servidor de desarrollo:
+      npm run dev
 
-cd frontend
-Instala las dependencias del proyecto:
-
-
-npm install
-Inicia el servidor de desarrollo:
-
-
-npm run dev
-Abre tu navegador e ingresa a http://localhost:5173 (o la URL indicada en la consola).
+# Abre tu navegador e ingresa a: 
+      http://localhost:5173 (o la URL indicada en la consola).
 
 ### 3. 🧪 Pruebas Automatizadas
 Para ejecutar las pruebas del backend, asegúrate de tener el entorno virtual activo y ejecuta:
-
-
-cd backend
-pytest
+#
+      cd backend
+      pytest
 
 ### 4. ✒️ Autor
 Desarrollador Junior / Analista de Soportes Digitales / 
 
-GitHub: @angelcamacho
+GitHub: @dev-angelcamacho
 
 ---
 ## 📐 Arquitectura del Sistema
